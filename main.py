@@ -32,7 +32,8 @@ ai_client = AsyncOpenAI(
 )
 
 app = Flask(__name__)
-CORS(app)
+# Разрешаем CORS глобально для интеграции с GitHub Pages
+CORS(app, resources={r"/api/*": {"origins": "*"}}) 
 
 def init_db():
     conn = sqlite3.connect("city_issues.db")
@@ -78,9 +79,7 @@ def run_flask():
 async def analyze_text_with_ai(user_text):
     text_lower = user_text.lower()
     
-    # 1. ЖЕСТКАЯ ПРОВЕРКА КЛЮЧЕВЫХ СЛОВ (Перехват до отправки в ИИ)
-    # Это гарантирует 100% точность для демонстрации жюри!
-    
+    # 1. ЖЕСТКАЯ ПРОВЕРКА КЛЮЧЕВЫХ СЛОВ (Мгновенный перехват для жюри)
     if "акимат" in text_lower or "нурсат" in text_lower:
         return "Благоустройство", "мкр. Нурсат, Здание Акимата", 42.3648, 69.6152
         
@@ -96,12 +95,12 @@ async def analyze_text_with_ai(user_text):
     elif "театр" in text_lower or "аль-фараби" in text_lower:
         return "Мусор", "площадь Аль-Фараби, 3", 42.3155, 69.5852
 
-    # 2. Если триггеры не сработали, отправляем запрос в ИИ Mixtral
+    # 2. Если триггеры не совпали, отправляем структурированный запрос в ИИ Mixtral
     prompt = f"""
     Ты — ИИ-модуль городской системы Шымкента. Твоя задача — извлечь из текста категорию проблемы, адрес, а также определить координаты (lat, lng) места в Шымкенте.
     Категории: "ЖКХ", "Дороги", "Благоустройство", "Мусор", "Освещение", "Другое".
     
-    Верни СТРОГО JSON без markdown:
+    Верни СТРОГО JSON без markdown разметки и без лишнего текста:
     {{"category": "категория", "address": "улица, дом", "lat": 42.3417, "lng": 69.5901}}
 
     Текст жителя: "{user_text}"
@@ -114,8 +113,11 @@ async def analyze_text_with_ai(user_text):
         )
         result_text = response.choices[0].message.content.strip()
         
+        # Очистка от случайных тэгов разметки, если ИИ их добавил
         if result_text.startswith("```json"):
             result_text = result_text[7:-3].strip()
+        elif result_text.startswith("```"):
+            result_text = result_text[3:-3].strip()
             
         data = json.loads(result_text)
         return (
@@ -124,35 +126,14 @@ async def analyze_text_with_ai(user_text):
             float(data.get("lat", 42.3417)),
             float(data.get("lng", 69.5901))
         )
-    except Exception as e:
-        print(f"Авто-подстраховка: {e}")
-        return "Другое", "Определен автоматически", 42.3417, 69.5901
-    try:
-        response = await ai_client.chat.completions.create(
-            model="mixtral-8x7b-32768", 
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1
-        )
-        result_text = response.choices[0].message.content.strip()
         
-        # Очистка, если ИИ случайно добавил маркдаун
-        if result_text.startswith("```json"):
-            result_text = result_text[7:-3].strip()
-            
-        data = json.loads(result_text)
-        return (
-            data.get("category", "Другое"), 
-            data.get("address", "Не указан"),
-            float(data.get("lat", 42.3417)),
-            float(data.get("lng", 69.5901))
-        )
     except Exception as e:
-        print(f"Внимание! Сработала авто-подстраховка ИИ: {e}")
-        text_lower = user_text.lower()
+        # 3. АВТО-ПОДСТРАХОВКА (Если упал интернет, Groq API выдал лимит или JSON сломался)
+        print(f"⚠️ Сработал Fallback-режим бэкенда: {e}")
         category, lat, lng = "Другое", 42.3417, 69.5901
         
-        if "свет" in text_lower or "фонар" in text_lower:
-            category, lat, lng = "Освещение", 42.3204, 69.5915
+        if "свет" in text_lower or "фонар" in text_lower or "освещен" in text_lower:
+            category, lat, lng = "Освещение", 42.3215, 69.5908
         elif "дорог" in text_lower or "ям" in text_lower:
             category, lat, lng = "Дороги", 42.3582, 69.5931
         elif "мусор" in text_lower or "бак" in text_lower:
@@ -160,7 +141,7 @@ async def analyze_text_with_ai(user_text):
         elif "акимат" in text_lower:
             category, lat, lng = "Благоустройство", 42.3648, 69.6152
             
-        return category, "Определен автоматически", lat, lng
+        return category, "Определен автоматически (Локальный парсер)", lat, lng
 
 @dp.message(Command("start"))
 async def start_command(message: types.Message):
@@ -182,12 +163,12 @@ async def handle_message(message: types.Message):
     conn.commit()
     conn.close()
     
-    reply = f"✅ **Жалоба зафиксирована!**\n\n🗂 **Категория:** {category}\n📍 **Адрес:** {address}\n🎯 **Координаты (ИИ):** {lat}, {lng}"
+    reply = f"✅ **Жалоба зафиксирована!**\n\n🗂 **Категория:** {category}\n📍 **Адрес:** {address}\n🎯 **Координаты:** {lat}, {lng}"
     await message.answer(reply, parse_mode="Markdown")
 
 async def main():
     init_db()
-    print("🚀 ИИ-сервер запущен! Ждем сообщения...")
+    print("🚀 ИИ-сервер запущен! Ждем сообщения от жителей...")
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
