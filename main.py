@@ -32,8 +32,16 @@ ai_client = AsyncOpenAI(
 )
 
 app = Flask(__name__)
-# Разрешаем CORS глобально для интеграции с GitHub Pages
-CORS(app, resources={r"/api/*": {"origins": "*"}}) 
+
+# МАКСИМАЛЬНО АГРЕССИВНЫЙ CORS: Разрешаем любые запросы со всех устройств
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=False)
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,ngrok-skip-browser-warning'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS'
+    return response
 
 def init_db():
     conn = sqlite3.connect("city_issues.db")
@@ -79,28 +87,24 @@ def run_flask():
 async def analyze_text_with_ai(user_text):
     text_lower = user_text.lower()
     
-    # 1. ЖЕСТКАЯ ПРОВЕРКА КЛЮЧЕВЫХ СЛОВ (Мгновенный перехват для жюри)
+    # 1. ЖЕСТКАЯ ПРОВЕРКА КЛЮЧЕВЫХ СЛОВ (Перехват до отправки в ИИ)
     if "акимат" in text_lower or "нурсат" in text_lower:
         return "Благоустройство", "мкр. Нурсат, Здание Акимата", 42.3648, 69.6152
-        
     elif "плаза" in text_lower or "plaza" in text_lower:
         return "Благоустройство", "проспект Кунаева, ТРЦ Shymkent Plaza", 42.3204, 69.5915
-        
     elif "цум" in text_lower or "кунаева 17" in text_lower:
         return "Освещение", "проспект Кунаева, 17 (ЦУМ)", 42.3215, 69.5908
-        
-    elif "байдибек" in text_lower or "казына" in text_lower:
+    elif "바이дибек" in text_lower or "байдибек" in text_lower or "казына" in text_lower:
         return "Дороги", "проспект Байдибек би, Этнопарк", 42.3582, 69.5931
-        
     elif "театр" in text_lower or "аль-фараби" in text_lower:
         return "Мусор", "площадь Аль-Фараби, 3", 42.3155, 69.5852
 
-    # 2. Если триггеры не совпали, отправляем структурированный запрос в ИИ Mixtral
+    # 2. Если триггеры не сработали, отправляем запрос в ИИ Mixtral
     prompt = f"""
     Ты — ИИ-модуль городской системы Шымкента. Твоя задача — извлечь из текста категорию проблемы, адрес, а также определить координаты (lat, lng) места в Шымкенте.
     Категории: "ЖКХ", "Дороги", "Благоустройство", "Мусор", "Освещение", "Другое".
     
-    Верни СТРОГО JSON без markdown разметки и без лишнего текста:
+    Верни СТРОГО JSON без markdown разметки:
     {{"category": "категория", "address": "улица, дом", "lat": 42.3417, "lng": 69.5901}}
 
     Текст жителя: "{user_text}"
@@ -113,7 +117,6 @@ async def analyze_text_with_ai(user_text):
         )
         result_text = response.choices[0].message.content.strip()
         
-        # Очистка от случайных тэгов разметки, если ИИ их добавил
         if result_text.startswith("```json"):
             result_text = result_text[7:-3].strip()
         elif result_text.startswith("```"):
@@ -126,12 +129,9 @@ async def analyze_text_with_ai(user_text):
             float(data.get("lat", 42.3417)),
             float(data.get("lng", 69.5901))
         )
-        
     except Exception as e:
-        # 3. АВТО-ПОДСТРАХОВКА (Если упал интернет, Groq API выдал лимит или JSON сломался)
         print(f"⚠️ Сработал Fallback-режим бэкенда: {e}")
         category, lat, lng = "Другое", 42.3417, 69.5901
-        
         if "свет" in text_lower or "фонар" in text_lower or "освещен" in text_lower:
             category, lat, lng = "Освещение", 42.3215, 69.5908
         elif "дорог" in text_lower or "ям" in text_lower:
@@ -168,7 +168,7 @@ async def handle_message(message: types.Message):
 
 async def main():
     init_db()
-    print("🚀 ИИ-сервер запущен! Ждем сообщения от жителей...")
+    print("🚀 ИИ-сервер запущен! Ждем сообщения...")
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
