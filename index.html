@@ -35,14 +35,45 @@
         .leaflet-popup-content-wrapper { background: #1e1b4b !important; color: #f8fafc !important; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; }
         .leaflet-popup-tip { background: #1e1b4b !important; }
 
-        /* Мобильная адаптация */
+       /* Мобильная адаптация */
         @media (max-width: 768px) {
             body { overflow: hidden; }
             header { padding: 12px 15px; }
             h1 { font-size: 18px; }
-            .main-container { flex-direction: column; padding: 12px; gap: 12px; height: calc(100vh - 55px); }
-            .map-wrapper { order: 1; flex: none; height: 40vh; border-radius: 18px; }
-            .sidebar { order: 2; flex: 1; max-width: 100%; border-radius: 18px; padding: 15px; }
+            
+            /* Главный контейнер на мобилках делит экран четко пополам */
+            .main-container { 
+                flex-direction: column; 
+                padding: 12px; 
+                gap: 12px; 
+                height: calc(100vh - 55px); 
+            }
+            
+            /* Карта занимает фиксированные 40% высоты */
+            .map-wrapper { 
+                order: 1; 
+                flex: none; 
+                height: 40vh; 
+                border-radius: 18px; 
+            }
+            
+            /* Сайдбар занимает оставшееся место и разрешает внутренний скролл */
+            .sidebar { 
+                order: 2; 
+                flex: 1; 
+                max-width: 100%; 
+                border-radius: 18px; 
+                padding: 15px; 
+                overflow: hidden; /* Чтобы сам сайдбар не ломал экран */
+            }
+
+            /* Сама лента инцидентов теперь плавно скроллится пальцем */
+            .issues-list {
+                flex: 1;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch; /* Плавный скролл на айфонах (инерция) */
+                max-height: calc(50vh - 80px); /* Ограничиваем высоту, чтобы активировать скролл */
+            }
         }
     </style>
 </head>
