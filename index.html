@@ -64,18 +64,19 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
-        // Проверка ширины экрана
         const isMobile = window.innerWidth <= 768;
 
         // Инициализация карты
         const map = L.map('map', {
-            zoomControl: !isMobile // Отключаем кнопки зума на мобилках
+            zoomControl: !isMobile
         }).setView([42.3417, 69.5901], 12);
 
-        // Темная тема карты
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap &copy; CARTO'
         }).addTo(map);
+
+        // Принудительный пересчет размеров карты сразу после загрузки (Фикс для мобилок)
+        setTimeout(() => { map.invalidateSize(); }, 200);
 
         const displayedIssues = new Set();
         const statusBadge = document.getElementById('statusBadge');
@@ -83,8 +84,13 @@
 
         async function fetchIssues() {
             try {
-               
-const response = await fetch('https://a1b2-c3d4-e5f6.ngrok-free.app/api/issues');
+                const ngrokUrl = 'https://clatter-choosy-foam.ngrok-free.dev/api/issues';
+                
+                const url = (window.location.hostname === 'localhost' || window.location.protocol === 'file:') 
+                    ? 'http://localhost:5000/api/issues' 
+                    : ngrokUrl;
+
+                const response = await fetch(url);
                 if (!response.ok) throw new Error('Ошибка сервера');
                 
                 const issues = await response.json();
@@ -104,7 +110,6 @@ const response = await fetch('https://a1b2-c3d4-e5f6.ngrok-free.app/api/issues')
                             lng = 69.5901 + (Math.random() - 0.5) * 0.02;
                         }
 
-                        // Создание карточки
                         const card = document.createElement('div');
                         card.className = 'issue-card';
                         card.innerHTML = `
@@ -115,7 +120,6 @@ const response = await fetch('https://a1b2-c3d4-e5f6.ngrok-free.app/api/issues')
                             <div class="card-address">📍 ${issue.address}</div>
                         `;
 
-                        // Создание маркера
                         const marker = L.marker([lat, lng]).addTo(map);
                         marker.bindPopup(`
                             <b style="color: #38bdf8; font-size:14px;">${issue.category}</b><br>
@@ -123,7 +127,6 @@ const response = await fetch('https://a1b2-c3d4-e5f6.ngrok-free.app/api/issues')
                             <small style="color: #94a3b8;">Адрес: ${issue.address}</small>
                         `);
 
-                        // Обработчик клика (flyTo)
                         card.addEventListener('click', () => {
                             map.flyTo([lat, lng], 16, { animate: true, duration: 1.5 });
                             map.once('moveend', () => { marker.openPopup(); });
@@ -139,11 +142,12 @@ const response = await fetch('https://a1b2-c3d4-e5f6.ngrok-free.app/api/issues')
             }
         }
 
-        // Запуск
-        fetchIssues();
-        setInterval(fetchIssues, 4000); // Опрос каждые 4 секунды (чуть реже для стабильности)
+        // КРИТИЧЕСКИЙ ФИКС: Срочно запускаем опрос сразу при старте страницы!
+        fetchIssues(); 
+        
+        // Затем повторяем каждые 4 секунды
+        setInterval(fetchIssues, 4000); 
 
-        // Исправление бага Leaflet при изменении размера окна
         window.addEventListener('resize', () => { map.invalidateSize(); });
     </script>
 </body>
