@@ -150,11 +150,15 @@
             color: #94a3b8;
         }
 
+        /* ПОЛНЫЙ СПИСОК СТИЛЕЙ ПОД 8 КАТЕГОРИЙ */
         .issue-card[data-cat="Освещение"] .category-tag { background-color: rgba(234, 179, 8, 0.15); color: #eab308; }
         .issue-card[data-cat="Дороги"] .category-tag { background-color: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+        .issue-card[data-cat="Транспорт"] .category-tag { background-color: rgba(14, 165, 233, 0.15); color: #0ea5e9; }
         .issue-card[data-cat="Мусор"] .category-tag { background-color: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .issue-card[data-cat="Экология"] .category-tag { background-color: rgba(34, 197, 94, 0.15); color: #22c55e; }
         .issue-card[data-cat="ЖКХ"] .category-tag { background-color: rgba(16, 185, 129, 0.15); color: #10b77f; }
         .issue-card[data-cat="Благоустройство"] .category-tag { background-color: rgba(168, 85, 247, 0.15); color: #a855f7; }
+        .issue-card[data-cat="Безопасность"] .category-tag { background-color: rgba(249, 115, 22, 0.15); color: #f97316; }
 
         .radius-tag {
             font-size: 11px;
@@ -281,7 +285,7 @@
 
         let mapLayers = [];
 
-        
+        // Твой актуальный рабочий URL-адрес Ngrok-туннеля
         const API_URL = 'https://clatter-choosy-foam.ngrok-free.dev';
 
         async function fetchIssues() {
