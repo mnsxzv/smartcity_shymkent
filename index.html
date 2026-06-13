@@ -12,6 +12,10 @@
         header { padding: 15px 25px; background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; z-index: 10; }
         h1 { font-size: 20px; font-weight: 700; background: linear-gradient(to right, #38bdf8, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
+        .header-controls { display: flex; align-items: center; gap: 15px; }
+        #clearBtn { background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px; transition: all 0.2s ease; }
+        #clearBtn:hover { background: #dc2626; transform: scale(1.03); }
+        
         .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; transition: all 0.5s ease; white-space: nowrap; }
         .status-online { background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.4); color: #4ade80; box-shadow: 0 0 15px rgba(34, 197, 94, 0.2); }
         .status-offline { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); }
@@ -35,52 +39,23 @@
         .leaflet-popup-content-wrapper { background: #1e1b4b !important; color: #f8fafc !important; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; }
         .leaflet-popup-tip { background: #1e1b4b !important; }
 
-       /* Мобильная адаптация */
         @media (max-width: 768px) {
             body { overflow: hidden; }
             header { padding: 12px 15px; }
             h1 { font-size: 18px; }
-            
-            /* Главный контейнер на мобилках делит экран четко пополам */
-            .main-container { 
-                flex-direction: column; 
-                padding: 12px; 
-                gap: 12px; 
-                height: calc(100vh - 55px); 
-            }
-            
-            /* Карта занимает фиксированные 40% высоты */
-            .map-wrapper { 
-                order: 1; 
-                flex: none; 
-                height: 40vh; 
-                border-radius: 18px; 
-            }
-            
-            /* Сайдбар занимает оставшееся место и разрешает внутренний скролл */
-            .sidebar { 
-                order: 2; 
-                flex: 1; 
-                max-width: 100%; 
-                border-radius: 18px; 
-                padding: 15px; 
-                overflow: hidden; /* Чтобы сам сайдбар не ломал экран */
-            }
-
-            /* Сама лента инцидентов теперь плавно скроллится пальцем */
-            .issues-list {
-                flex: 1;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch; /* Плавный скролл на айфонах (инерция) */
-                max-height: calc(50vh - 80px); /* Ограничиваем высоту, чтобы активировать скролл */
-            }
+            .main-container { flex-direction: column; padding: 12px; gap: 12px; height: calc(100vh - 55px); }
+            .map-wrapper { order: 1; flex: none; height: 40vh; border-radius: 18px; }
+            .sidebar { order: 2; flex: 1; max-width: 100%; border-radius: 18px; padding: 15px; }
         }
     </style>
 </head>
 <body>
     <header>
         <h1>Smart City Shymkent</h1>
-        <div id="statusBadge" class="status-badge status-offline">Нет связи</div>
+        <div class="header-controls">
+            <button id="clearBtn">Очистить карту</button>
+            <div id="statusBadge" class="status-badge status-offline">Нет связи</div>
+        </div>
     </header>
 
     <div class="main-container">
@@ -111,17 +86,15 @@
         const statusBadge = document.getElementById('statusBadge');
         const listContainer = document.getElementById('issuesList');
 
+        const ngrokUrl = 'https://clatter-choosy-foam.ngrok-free.dev';
+        
+        const baseUrl = (window.location.hostname === 'localhost' || window.location.protocol === 'file:') 
+            ? 'http://localhost:5000' 
+            : ngrokUrl;
+
         async function fetchIssues() {
             try {
-                // ⚠️ ЕСЛИ ССЫЛКА ИЗМЕНИЛАСЬ В ТЕРМИНАЛЕ, ПОПРАВЬ ЕЁ ТУТ:
-                const ngrokUrl = 'https://clatter-choosy-foam.ngrok-free.dev/api/issues';
-                
-                const url = (window.location.hostname === 'localhost' || window.location.protocol === 'file:') 
-                    ? 'http://localhost:5000/api/issues' 
-                    : ngrokUrl;
-
-                // Запрос с принудительным обходом синего экрана предупреждения Ngrok
-                const response = await fetch(url, {
+                const response = await fetch(`${baseUrl}/api/issues`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -142,6 +115,7 @@
 
                         let lat = parseFloat(issue.lat);
                         let lng = parseFloat(issue.lng);
+                        let radius = parseFloat(issue.radius) || 100;
 
                         if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
                             lat = 42.3417 + (Math.random() - 0.5) * 0.02;
@@ -151,22 +125,35 @@
                         const card = document.createElement('div');
                         card.className = 'issue-card';
                         card.innerHTML = `
-                            <div style="display: flex; justify-content: space-between;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <span class="category-tag">${issue.category}</span>
+                                <span style="font-size: 10px; color: #a855f7; font-weight:600;">± ${parseInt(radius)}м</span>
                             </div>
                             <div class="card-text">${issue.text}</div>
                             <div class="card-address">📍 ${issue.address}</div>
                         `;
 
                         const marker = L.marker([lat, lng]).addTo(map);
-                        marker.bindPopup(`
+                        
+                        const circle = L.circle([lat, lng], {
+                            color: '#a855f7',
+                            fillColor: '#38bdf8',
+                            fillOpacity: 0.15,
+                            radius: radius
+                        }).addTo(map);
+
+                        const popupContent = `
                             <b style="color: #38bdf8; font-size:14px;">${issue.category}</b><br>
                             <span style="font-size: 13px; display:inline-block; margin: 4px 0;">${issue.text}</span><br>
-                            <small style="color: #94a3b8;">Адрес: ${issue.address}</small>
-                        `);
+                            <small style="color: #94a3b8; display:block;">📍 ${issue.address}</small>
+                            <small style="color: #a855f7; font-weight:600;">⭕️ Зона: ~${parseInt(radius)}м</small>
+                        `;
+
+                        marker.bindPopup(popupContent);
+                        circle.bindPopup(popupContent);
 
                         card.addEventListener('click', () => {
-                            map.flyTo([lat, lng], 16, { animate: true, duration: 1.5 });
+                            map.flyTo([lat, lng], radius > 500 ? 13 : 15, { animate: true, duration: 1.5 });
                             map.once('moveend', () => { marker.openPopup(); });
                         });
 
@@ -179,6 +166,24 @@
                 statusBadge.className = "status-badge status-offline";
             }
         }
+
+        document.getElementById('clearBtn').addEventListener('click', async () => {
+            if (confirm('Очистить карту от всех меток?')) {
+                try {
+                    const response = await fetch(`${baseUrl}/api/issues/clear`, {
+                        method: 'POST',
+                        headers: { 'ngrok-skip-browser-warning': 'true' }
+                    });
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        location.reload();
+                    }
+                } catch (error) {
+                    alert('Ошибка при очистке');
+                    console.error(error);
+                }
+            }
+        });
 
         fetchIssues(); 
         setInterval(fetchIssues, 4000); 
