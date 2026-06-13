@@ -2,193 +2,340 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart City Shymkent — ИИ Мониторинг</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система Мониторинга Шымкента</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
-        body { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%); color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        
-        header { padding: 15px 25px; background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; z-index: 10; }
-        h1 { font-size: 20px; font-weight: 700; background: linear-gradient(to right, #38bdf8, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        
-        .header-controls { display: flex; align-items: center; gap: 15px; }
-        #clearBtn { background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px; transition: all 0.2s ease; }
-        #clearBtn:hover { background: #dc2626; transform: scale(1.03); }
-        
-        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; transition: all 0.5s ease; white-space: nowrap; }
-        .status-online { background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.4); color: #4ade80; box-shadow: 0 0 15px rgba(34, 197, 94, 0.2); }
-        .status-offline { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
 
-        .main-container { display: flex; flex: 1; padding: 20px; gap: 20px; height: calc(100vh - 65px); }
-        .sidebar { flex: 1; max-width: 400px; background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); }
-        .sidebar h2 { font-size: 16px; color: #94a3b8; font-weight: 600; }
-        .issues-list { overflow-y: auto; display: flex; flex-direction: column; gap: 12px; flex: 1; padding-right: 5px; }
-        .issues-list::-webkit-scrollbar { width: 4px; }
-        .issues-list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
 
-        .issue-card { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 14px; padding: 14px; transition: all 0.3s ease; animation: fadeIn 0.5s ease-out; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .issue-card:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(56, 189, 248, 0.4); transform: translateY(-2px); }
-        .category-tag { font-size: 10px; text-transform: uppercase; font-weight: 700; color: #38bdf8; }
-        .card-text { font-size: 13px; color: #cbd5e1; line-height: 1.4; margin-bottom: 6px; margin-top: 4px; }
-        .card-address { font-size: 11px; color: #64748b; }
+        #sidebar {
+            width: 400px;
+            background-color: #1e293b;
+            border-right: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            z-index: 10;
+            box-shadow: 4px 0 25px rgba(0,0,0,0.5);
+        }
 
-        .map-wrapper { flex: 2; background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 8px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); z-index: 1; }
-        #map { width: 100%; height: 100%; border-radius: 16px; background: #111827; }
-        .leaflet-popup-content-wrapper { background: #1e1b4b !important; color: #f8fafc !important; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; }
-        .leaflet-popup-tip { background: #1e1b4b !important; }
+        .header {
+            padding: 24px;
+            border-bottom: 1px solid #334155;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        }
 
-        @media (max-width: 768px) {
-            body { overflow: hidden; }
-            header { padding: 12px 15px; }
-            h1 { font-size: 18px; }
-            .main-container { flex-direction: column; padding: 12px; gap: 12px; height: calc(100vh - 55px); }
-            .map-wrapper { order: 1; flex: none; height: 40vh; border-radius: 18px; }
-            .sidebar { order: 2; flex: 1; max-width: 100%; border-radius: 18px; padding: 15px; }
+        .header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: #f8fafc;
+            margin-bottom: 4px;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        #list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        #list-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        #list-container::-webkit-scrollbar-thumb {
+            background-color: #475569;
+            border-radius: 3px;
+        }
+
+        .issue-card {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .issue-card:hover {
+            border-color: #a855f7;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .category-tag {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 4px 8px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+            background-color: #334155;
+            color: #94a3b8;
+        }
+
+        .issue-card[data-cat="Освещение"] .category-tag { background-color: rgba(234, 179, 8, 0.15); color: #eab308; }
+        .issue-card[data-cat="Дороги"] .category-tag { background-color: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+        .issue-card[data-cat="Мусор"] .category-tag { background-color: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .issue-card[data-cat="ЖКХ"] .category-tag { background-color: rgba(16, 185, 129, 0.15); color: #10b77f; }
+        .issue-card[data-cat="Благоустройство"] .category-tag { background-color: rgba(168, 85, 247, 0.15); color: #a855f7; }
+
+        .radius-tag {
+            font-size: 11px;
+            color: #38bdf8;
+            font-weight: 600;
+            background-color: rgba(56, 189, 248, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .card-text {
+            font-size: 14px;
+            color: #e2e8f0;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+
+        .card-address {
+            font-size: 12px;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .footer {
+            padding: 16px;
+            border-top: 1px solid #334155;
+            background-color: #0f172a;
+        }
+
+        .clear-btn {
+            width: 100%;
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .clear-btn:hover {
+            background-color: #ef4444;
+            color: #ffffff;
+        }
+
+        #map-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .leaflet-popup-content-wrapper {
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+            border: 1px solid #334155;
+            border-radius: 12px !important;
+            padding: 4px;
+        }
+
+        .leaflet-popup-tip {
+            background-color: #1e293b !important;
+            border: 1px solid #334155;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #64748b;
+            font-size: 14px;
+            margin-top: 40px;
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Smart City Shymkent</h1>
-        <div class="header-controls">
-            <button id="clearBtn">Очистить карту</button>
-            <div id="statusBadge" class="status-badge status-offline">Нет связи</div>
-        </div>
-    </header>
 
-    <div class="main-container">
-        <div class="sidebar">
-            <h2>Новые инциденты</h2>
-            <div class="issues-list" id="issuesList"></div>
+    <div id="sidebar">
+        <div class="header">
+            <h1>Ситуационный Центр</h1>
+            <p>Мониторинг инцидентов Шымкента</p>
         </div>
-        <div class="map-wrapper">
-            <div id="map"></div>
+        
+        <div id="list-container">
+            </div>
+        
+        <div class="footer">
+            <button class="clear-btn" onclick="clearMap()">Очистить карту</button>
         </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <div id="map-container">
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <script>
-        const isMobile = window.innerWidth <= 768;
+        // Координаты центра Шымкента для инициализации карты
+        const map = L.map('map', { zoomControl: false }).setView([42.3417, 69.5901], 12);
+        L.control.zoom({ position: 'topright' }).addTo(map);
 
-        const map = L.map('map', {
-            zoomControl: !isMobile
-        }).setView([42.3417, 69.5901], 12);
-
+        // Стильная темная тема карты (Картографическая подложка CartoDB)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap &copy; CARTO'
         }).addTo(map);
 
-        setTimeout(() => { map.invalidateSize(); }, 200);
+        // Массив для хранения всех активных слоев (чтобы стирать их при очистке)
+        let mapLayers = [];
 
-        const displayedIssues = new Set();
-        const statusBadge = document.getElementById('statusBadge');
-        const listContainer = document.getElementById('issuesList');
-
-        const ngrokUrl = 'https://clatter-choosy-foam.ngrok-free.dev';
-        
-        const baseUrl = (window.location.hostname === 'localhost' || window.location.protocol === 'file:') 
-            ? 'http://localhost:5000' 
-            : ngrokUrl;
+        // Ссылка на твой бэкенд (локальный или ngrok)
+        const API_URL = 'http://localhost:5000';
 
         async function fetchIssues() {
             try {
-                const response = await fetch(`${baseUrl}/api/issues`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'ngrok-skip-browser-warning': 'true'
-                    }
+                const response = await fetch(`${API_URL}/api/issues`, {
+                    headers: { 'ngrok-skip-browser-warning': 'true' }
                 });
-                
-                if (!response.ok) throw new Error('Ошибка сервера');
-                
                 const issues = await response.json();
                 
-                statusBadge.textContent = "ИИ-Аналитика Live";
-                statusBadge.className = "status-badge status-online";
+                // Стираем всё старое с карты и панели
+                mapLayers.forEach(layer => map.removeLayer(layer));
+                mapLayers = [];
+                
+                const listContainer = document.getElementById('list-container');
+                listContainer.innerHTML = '';
 
-                issues.forEach(issue => {
-                    if (!displayedIssues.has(issue.id)) {
-                        displayedIssues.add(issue.id);
+                if (issues.length === 0) {
+                    listContainer.innerHTML = '<div class="no-data">Ячеек с инцидентами пока нет.<br>Отправьте сообщение боту!</div>';
+                    return;
+                }
 
-                        let lat = parseFloat(issue.lat);
-                        let lng = parseFloat(issue.lng);
-                        let radius = parseFloat(issue.radius) || 100;
+                // Разворачиваем массив, чтобы новые инциденты шли сверху
+                issues.reverse().forEach(issue => {
+                    let lat = parseFloat(issue.lat);
+                    let lng = parseFloat(issue.lng);
+                    let radius = parseFloat(issue.radius) || 100;
 
-                        if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
-                            lat = 42.3417 + (Math.random() - 0.5) * 0.02;
-                            lng = 69.5901 + (Math.random() - 0.5) * 0.02;
-                        }
-
-                        const card = document.createElement('div');
-                        card.className = 'issue-card';
-                        card.innerHTML = `
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span class="category-tag">${issue.category}</span>
-                                <span style="font-size: 10px; color: #a855f7; font-weight:600;">± ${parseInt(radius)}м</span>
-                            </div>
-                            <div class="card-text">${issue.text}</div>
-                            <div class="card-address">📍 ${issue.address}</div>
-                        `;
-
-                        const marker = L.marker([lat, lng]).addTo(map);
-                        
-                        const circle = L.circle([lat, lng], {
-                            color: '#a855f7',
-                            fillColor: '#38bdf8',
-                            fillOpacity: 0.15,
-                            radius: radius
-                        }).addTo(map);
-
-                        const popupContent = `
-                            <b style="color: #38bdf8; font-size:14px;">${issue.category}</b><br>
-                            <span style="font-size: 13px; display:inline-block; margin: 4px 0;">${issue.text}</span><br>
-                            <small style="color: #94a3b8; display:block;">📍 ${issue.address}</small>
-                            <small style="color: #a855f7; font-weight:600;">⭕️ Зона: ~${parseInt(radius)}м</small>
-                        `;
-
-                        marker.bindPopup(popupContent);
-                        circle.bindPopup(popupContent);
-
-                        card.addEventListener('click', () => {
-                            map.flyTo([lat, lng], radius > 500 ? 13 : 15, { animate: true, duration: 1.5 });
-                            map.once('moveend', () => { marker.openPopup(); });
-                        });
-
-                        listContainer.insertBefore(card, listContainer.firstChild);
+                    // Страховка от пустых или сломанных координат
+                    if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+                        lat = 42.3417 + (Math.random() - 0.5) * 0.02;
+                        lng = 69.5901 + (Math.random() - 0.5) * 0.02;
                     }
+
+                    // Содержимое всплывающего попапа
+                    const popupContent = `
+                        <div style="padding: 4px;">
+                            <b style="color: #38bdf8; font-size:14px; display:block; margin-bottom:4px;">${issue.category}</b>
+                            <span style="font-size: 13px; color:#e2e8f0; display:block; margin-bottom:6px; line-height:1.4;">${issue.text}</span>
+                            <small style="color: #94a3b8; display:block; margin-bottom:2px;">📍 ${issue.address}</small>
+                            <small style="color: #a855f7; font-weight:600;">⭕️ Зона: ~${parseInt(radius)}м</small>
+                        </div>
+                    `;
+
+                    // 1. Создаем точечный маркер
+                    const marker = L.marker([lat, lng]).addTo(map);
+                    marker.bindPopup(popupContent);
+                    mapLayers.push(marker);
+                    
+                    // 2. Рисуем ту самую неоновую буферную зону
+                    const circle = L.circle([lat, lng], {
+                        color: '#a855f7',       
+                        fillColor: '#38bdf8',   
+                        fillOpacity: 0.15,      
+                        weight: 1.5,
+                        radius: radius          
+                    }).addTo(map);
+                    circle.bindPopup(popupContent);
+                    mapLayers.push(circle);
+
+                    // 3. Собираем карточку для левого сайдбара
+                    const card = document.createElement('div');
+                    card.className = 'issue-card';
+                    card.setAttribute('data-cat', issue.category);
+                    card.innerHTML = `
+                        <div class="card-header">
+                            <span class="category-tag">${issue.category}</span>
+                            <span class="radius-tag">± ${parseInt(radius)}м</span>
+                        </div>
+                        <div class="card-text">${issue.text}</div>
+                        <div class="card-address">📍 ${issue.address}</div>
+                    `;
+
+                    // При клике на карточку летим к зоне
+                    card.addEventListener('click', () => {
+                        // Если зона огромная (микрорайон), держим камеру повыше (zoom 14), если мелкий дом — приближаем в упор (zoom 16)
+                        const targetZoom = radius > 600 ? 14 : 16;
+                        map.flyTo([lat, lng], targetZoom, {
+                            animate: true,
+                            duration: 1.2
+                        });
+                        
+                        // Открываем попап маркера сразу после окончания плавного полета камеры
+                        map.once('moveend', () => {
+                            marker.openPopup();
+                        });
+                    });
+
+                    listContainer.appendChild(card);
                 });
+
             } catch (error) {
-                console.error('Ошибка связи:', error);
-                statusBadge.textContent = "Нет связи";
-                statusBadge.className = "status-badge status-offline";
+                console.error("Ошибка обновления данных:", error);
             }
         }
 
-        document.getElementById('clearBtn').addEventListener('click', async () => {
-            if (confirm('Очистить карту от всех меток?')) {
-                try {
-                    const response = await fetch(`${baseUrl}/api/issues/clear`, {
-                        method: 'POST',
-                        headers: { 'ngrok-skip-browser-warning': 'true' }
-                    });
-                    const data = await response.json();
-                    if (data.status === 'success') {
-                        location.reload();
-                    }
-                } catch (error) {
-                    alert('Ошибка при очистке');
-                    console.error(error);
+        async function clearMap() {
+            if (!confirm("Вы уверены, что хотите очистить всю карту инцидентов?")) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/issues/clear`, { method: 'POST' });
+                if (response.ok) {
+                    fetchIssues();
                 }
+            } catch (error) {
+                console.error("Ошибка при очистке:", error);
             }
-        });
+        }
 
-        fetchIssues(); 
-        setInterval(fetchIssues, 4000); 
-
-        window.addEventListener('resize', () => { map.invalidateSize(); });
+        // Автоматическое обновление данных каждые 4 секунды, чтобы новые маркеры прилетали на карту без перезагрузки страницы
+        fetchIssues();
+        setInterval(fetchIssues, 4000);
     </script>
 </body>
 </html>
